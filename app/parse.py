@@ -21,6 +21,8 @@ TABLETS_URL = urljoin(HOME_URL, "computers/tablets")
 PHONES_URL = urljoin(HOME_URL, "phones")
 TOUCH_URL = urljoin(HOME_URL, "phones/touch")
 
+DEFAULT_TIMEOUT = 2
+
 
 @dataclass
 class Product:
@@ -48,7 +50,7 @@ def get_product_detail(
 
     for link in product_links:
         driver.get(link)
-        wait = WebDriverWait(driver, timeout=0.1)
+        wait = WebDriverWait(driver, timeout=DEFAULT_TIMEOUT)
         try:
             product_name = wait.until(
                 ec.presence_of_element_located(
@@ -70,18 +72,20 @@ def get_product_detail(
                 )
             )
 
-            product_price = round(
-                float(
-                    wait.until(
-                        ec.presence_of_element_located(
-                            (By.CSS_SELECTOR, "h4.price")
-                        )
-                    )
-                    .text.strip()
-                    .replace("$", "")
-                ),
-                2,
-            )
+            try:
+                product_price = round(
+                    float(
+                        wait.until(
+                            ec.presence_of_element_located(
+                                (By.CSS_SELECTOR, "h4.price")
+                            )
+                        ).text.strip().replace("$", "")
+                    ),
+                    2,
+                )
+            except ValueError:
+                print(f"Error parsing price for {product_name} at {link}")
+                product_price = 0.0
 
             product_data.append(
                 Product(
@@ -99,7 +103,7 @@ def get_product_detail(
 
 def scroll_and_load_all_products(driver: webdriver.Chrome, url: str) -> None:
     driver.get(url)
-    wait = WebDriverWait(driver=driver, timeout=2)
+    wait = WebDriverWait(driver=driver, timeout=DEFAULT_TIMEOUT)
     try:
         cookie_button = wait.until(
             ec.element_to_be_clickable(
@@ -132,7 +136,7 @@ def scroll_and_load_all_products(driver: webdriver.Chrome, url: str) -> None:
 def get_all_products_links(driver: webdriver.Chrome) -> list[str]:
     products_links = []
     try:
-        WebDriverWait(driver=driver, timeout=1).until(
+        WebDriverWait(driver=driver, timeout=DEFAULT_TIMEOUT).until(
             ec.presence_of_all_elements_located(
                 (By.CSS_SELECTOR, "div.card.thumbnail")
             )
